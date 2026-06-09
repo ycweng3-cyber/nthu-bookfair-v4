@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【今晚吃什麼】學長姐的求生輪盤</title>
+    <style>
+        /* ========================================================== */
+        /* ✨ 策展人專區：未來如果想改字，直接修改下方引號內的文字即可！ */
+        /* 注意：每行結尾要加上 \n ，最後一行不用。建議剛好 10 行最完美！ */
+        /* ========================================================== */
+        :root {
+            --wheel-prizes: 
+                "1. 宵夜街神級炸雞\n" +
+                "2. 東門市場文青料理\n" +
+                "3. 城隍廟百年肉圓\n" +
+                "4. 研究生續命咖啡\n" +
+                "5. 清大清茂麵線\n" +
+                "6. 大吃市人氣滷肉飯\n" +
+                "7. 水木餐廳經典排骨\n" +
+                "8. 經國路深夜串燒\n" +
+                "9. 校門口隱藏版綠洲\n" +
+                "10. 竹科工程師愛店肉羹";
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Noto Sans TC', sans-serif;
+            background: transparent; /* 改為透明，完美融入 Tally 背景 */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 轉盤外殼區 */
+        .wheel-section {
+            position: relative;
+            width: 360px;
+            height: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 灰褐色指標 */
+        .pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-top: 25px solid #7D7571;
+            z-index: 10;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.2));
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 10px solid #FFFDF4; /* 奶油外圈 */
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+            transition: transform 4s cubic-bezier(0.1, 0.8, 0.3, 1);
+        }
+        
+        /* 圓心鈕 */
+        #spin-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: #9A928D;
+            color: #fff;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: inset 0px -3px 0px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 5;
+            letter-spacing: 1px;
+        }
+        #spin-btn:disabled { background: #bbb; cursor: not-allowed; }
+
+        /* 彈出結果視窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            z-index: 100;
+            width: 85%;
+            max-width: 280px;
+        }
+        .modal h3 { margin-top: 0; color: #E89E84; font-size: 1.3rem; }
+        .modal button {
+            background: #6A8FAF; color: white; border: none;
+            padding: 8px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wheel-section">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="500" height="500"></canvas>
+        <button id="spin-btn">GO</button>
+    </div>
+
+    <div id="resultModal" class="modal">
+        <p style="margin:0; color:#666; font-size: 0.9rem;">今晚的命定晚餐是：</p>
+        <h3 id="prize-text"></h3>
+        <button onclick="closeModal()">太棒了！</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("wheel");
+        const ctx = canvas.getContext("2d");
+        const spinBtn = document.getElementById("spin-btn");
+        const modal = document.getElementById("resultModal");
+        const prizeText = document.getElementById("prize-text");
+
+        // 🎨 延伸自圖片的 10 色深淺交錯調色盤
+        const colorPalette = [
+            "#FBC0A8", "#6A8FAF", "#FCD3C1", "#82A5C3", "#E89E84", 
+            "#557796", "#FDE3D6", "#9BBED4", "#D6866B", "#435D75"
+        ];
+        
+        // 從 CSS CSS :root 中讀取文字清單
+        const rawPrizes = getComputedStyle(document.documentElement).getPropertyValue('--wheel-prizes');
+        // 處理特殊引號與換行，將其轉為陣列
+        const options = rawPrizes.replace(/["']/g, "").split('\n')
+            .map(opt => opt.trim())
+            .filter(opt => opt.length > 0);
+
+        function drawWheel() {
+            const numSegments = options.length;
+            const segmentAngle = (2 * Math.PI) / numSegments;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const radius = canvas.width / 2;
+            
+            ctx.textBaseline = "middle";
+            ctx.textAlign = "right";
+            ctx.font = "bold 18px sans-serif";
+
+            for (let i = 0; i < numSegments; i++) {
+                const angle = i * segmentAngle;
+                
+                ctx.beginPath();
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius, angle, angle + segmentAngle);
+                ctx.fillStyle = colorPalette[i % colorPalette.length];
+                ctx.fill();
+
+                ctx.strokeStyle = "rgba(255,255,255,0.6)";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(radius, radius);
+                ctx.rotate(angle + segmentAngle / 2);
+                
+                ctx.fillStyle = (i % colorPalette.length === 9) ? "#ffffff" : "#3D3735"; 
+                ctx.fillText(options[i], radius - 35, 0);
+                ctx.restore();
+            }
+        }
+
+        let isSpinning = false;
+        spinBtn.addEventListener("click", () => {
+            if (isSpinning || options.length < 2) return;
+            isSpinning = true;
+            spinBtn.disabled = true;
+
+            const numSegments = options.length;
+            const extraDegrees = Math.floor(Math.random() * 360);
+            const totalRotation = (8 + Math.floor(Math.random() * 5)) * 360 + extraDegrees;
+            
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                spinBtn.disabled = false;
+
+                const actualDegrees = totalRotation % 360;
+                const pointerAngle = (360 - actualDegrees + 270) % 360;
+                const winningIndex = Math.floor(pointerAngle / (360 / numSegments)) % numSegments;
+
+                prizeText.innerText = options[winningIndex];
+                modal.style.display = "block";
+                
+                canvas.style.transition = "none";
+                canvas.style.transform = `rotate(${actualDegrees}deg)`;
+                canvas.offsetHeight; 
+                canvas.style.transition = "transform 4s cubic-bezier(0.1, 0.8, 0.3, 1)";
+            }, 4000);
+        });
+
+        function closeModal() { modal.style.display = "none"; }
+
+        drawWheel();
+    </script>
+</body>
+</html>
