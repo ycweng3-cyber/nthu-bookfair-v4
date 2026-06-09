@@ -5,28 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【今晚吃什麼】學長姐的求生輪盤</title>
     <style>
-/* ========================================================== */
-        /* ✨ 策展人專區：未來如果想改字，直接修改下方引號內的文字即可！ */
-        /* 注意：每行最後面「不需要」加任何符號，直接按 Enter 換行即可！ */
-        /* ========================================================== */
-        :root {
-            --wheel-prizes: 
-                "1. 宵夜街神級炸雞
-                 2. 東門市場文青料理
-                 3. 城隍廟百年肉圓
-                 4. 研究生續命咖啡
-                 5. 清大清茂麵線
-                 6. 大吃市人氣滷肉飯
-                 7. 水木餐廳經典排骨
-                 8. 經國路深夜串燒
-                 9. 校門口隱藏版綠洲
-                 10. 竹科工程師愛店肉羹";
-        }
-
         * { box-sizing: border-box; }
         body {
             font-family: 'Helvetica Neue', Arial, 'Noto Sans TC', sans-serif;
-            background: transparent; /* 改為透明，完美融入 Tally 背景 */
+            background: transparent; /* 透明背景，完美融入 Tally */
             margin: 0;
             padding: 0;
             display: flex;
@@ -129,91 +111,35 @@
     </div>
 
     <script>
-        const canvas = document.getElementById("wheel");
-        const ctx = canvas.getContext("2d");
-        const spinBtn = document.getElementById("spin-btn");
-        const modal = document.getElementById("resultModal");
-        const prizeText = document.getElementById("prize-text");
+        // ===================================================================
+        // ✨ 策展人專區：未來如果想改字，直接修改下方引號【 】裡面的中文即可！
+        // 建議剛好保持 10 個選項，視覺效果最完美流暢。
+        // ===================================================================
+        const options = [
+            "1. 宵夜街神級炸雞",
+            "2. 東門市場文青料理",
+            "3. 城隍廟百年肉圓",
+            "4. 研究生續命咖啡",
+            "5. 清大清茂麵線",
+            "6. 大吃市人氣滷肉飯",
+            "7. 水木餐廳經典排骨",
+            "8. 經國路深夜串燒",
+            "9. 校門口隱藏版綠洲",
+            "10. 竹科工程師愛店肉羹"
+        ];
 
         // 🎨 延伸自圖片的 10 色深淺交錯調色盤
         const colorPalette = [
             "#FBC0A8", "#6A8FAF", "#FCD3C1", "#82A5C3", "#E89E84", 
             "#557796", "#FDE3D6", "#9BBED4", "#D6866B", "#435D75"
         ];
-        
-        // 從 CSS CSS :root 中讀取文字清單
-        const rawPrizes = getComputedStyle(document.documentElement).getPropertyValue('--wheel-prizes');
-        // 處理特殊引號與換行，將其轉為陣列
-        const options = rawPrizes.replace(/["']/g, "").split('\n')
-            .map(opt => opt.trim())
-            .filter(opt => opt.length > 0);
+
+        const canvas = document.getElementById("wheel");
+        const ctx = canvas.getContext("2d");
+        const spinBtn = document.getElementById("spin-btn");
+        const modal = document.getElementById("resultModal");
+        const prizeText = document.getElementById("prize-text");
 
         function drawWheel() {
             const numSegments = options.length;
-            const segmentAngle = (2 * Math.PI) / numSegments;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const radius = canvas.width / 2;
-            
-            ctx.textBaseline = "middle";
-            ctx.textAlign = "right";
-            ctx.font = "bold 18px sans-serif";
-
-            for (let i = 0; i < numSegments; i++) {
-                const angle = i * segmentAngle;
-                
-                ctx.beginPath();
-                ctx.moveTo(radius, radius);
-                ctx.arc(radius, radius, radius, angle, angle + segmentAngle);
-                ctx.fillStyle = colorPalette[i % colorPalette.length];
-                ctx.fill();
-
-                ctx.strokeStyle = "rgba(255,255,255,0.6)";
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-
-                ctx.save();
-                ctx.translate(radius, radius);
-                ctx.rotate(angle + segmentAngle / 2);
-                
-                ctx.fillStyle = (i % colorPalette.length === 9) ? "#ffffff" : "#3D3735"; 
-                ctx.fillText(options[i], radius - 35, 0);
-                ctx.restore();
-            }
-        }
-
-        let isSpinning = false;
-        spinBtn.addEventListener("click", () => {
-            if (isSpinning || options.length < 2) return;
-            isSpinning = true;
-            spinBtn.disabled = true;
-
-            const numSegments = options.length;
-            const extraDegrees = Math.floor(Math.random() * 360);
-            const totalRotation = (8 + Math.floor(Math.random() * 5)) * 360 + extraDegrees;
-            
-            canvas.style.transform = `rotate(${totalRotation}deg)`;
-
-            setTimeout(() => {
-                isSpinning = false;
-                spinBtn.disabled = false;
-
-                const actualDegrees = totalRotation % 360;
-                const pointerAngle = (360 - actualDegrees + 270) % 360;
-                const winningIndex = Math.floor(pointerAngle / (360 / numSegments)) % numSegments;
-
-                prizeText.innerText = options[winningIndex];
-                modal.style.display = "block";
-                
-                canvas.style.transition = "none";
-                canvas.style.transform = `rotate(${actualDegrees}deg)`;
-                canvas.offsetHeight; 
-                canvas.style.transition = "transform 4s cubic-bezier(0.1, 0.8, 0.3, 1)";
-            }, 4000);
-        });
-
-        function closeModal() { modal.style.display = "none"; }
-
-        drawWheel();
-    </script>
-</body>
-</html>
+            const segmentAngle = (2 * Math.PI) / numSegments
