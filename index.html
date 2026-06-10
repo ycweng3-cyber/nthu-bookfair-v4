@@ -5,28 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>【今晚吃什麼】學長姐的求生輪盤</title>
     <style>
-/* ========================================================== */
-        /* ✨ 策展人專區：未來如果想改字，直接修改下方引號內的文字即可！ */
-        /* 注意：每行最後面「不需要」加任何符號，直接按 Enter 換行即可！ */
-        /* ========================================================== */
-        :root {
-            --wheel-prizes: 
-                "宵夜街神級炸雞"
-                "東門市場文青料理"
-                "城隍廟百年肉圓"
-                "研究生續命咖啡"
-                "清大清茂麵線"
-                "大吃市人氣滷肉飯"
-                "水木餐廳經典排骨"
-                "經國路深夜串燒"
-                "校門口隱藏版綠洲"
-                "竹科工程師愛店肉羹";
-        }
-
         * { box-sizing: border-box; }
         body {
             font-family: 'Helvetica Neue', Arial, 'Noto Sans TC', sans-serif;
-            background: transparent; /* 改為透明，完美融入 Tally 背景 */
+            background: transparent; /* 透明背景，完美融入 Tally */
             margin: 0;
             padding: 0;
             display: flex;
@@ -99,18 +81,53 @@
             left: 50%;
             transform: translate(-50%, -50%);
             background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 30px 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             text-align: center;
             z-index: 100;
             width: 85%;
-            max-width: 280px;
+            max-width: 310px;
+            border: 1px solid #FAF9F6;
         }
-        .modal h3 { margin-top: 0; color: #E89E84; font-size: 1.3rem; }
+        
+        .modal .category-title { 
+            margin: 0 0 12px 0; 
+            color: #7D7571; 
+            font-size: 1rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed #E0DCD3;
+            padding-bottom: 8px;
+        }
+        
+        .modal .shop-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin: 5px 0 2px 0;
+        }
+
+        .modal .shop-name { 
+            color: #E89E84; 
+            font-size: 1.35rem; 
+            margin: 0 0 12px 0;
+            font-weight: bold;
+        }
+        
+        /* 星星樣式 */
+        .star-rating {
+            font-size: 1.4rem;
+            color: #FFB300; /* 經典金黃色 */
+            margin: 5px 0;
+            display: inline-block;
+            position: relative;
+        }
+        
         .modal button {
             background: #6A8FAF; color: white; border: none;
-            padding: 8px 20px; border-radius: 5px; cursor: pointer; margin-top: 15px;
+            padding: 10px 28px; border-radius: 6px; cursor: pointer; margin-top: 18px;
+            font-weight: bold; font-size: 0.95rem;
+            box-shadow: 0 2px 6px rgba(106, 143, 175, 0.3);
         }
     </style>
 </head>
@@ -123,30 +140,121 @@
     </div>
 
     <div id="resultModal" class="modal">
-        <p style="margin:0; color:#666; font-size: 0.9rem;">今晚的命定晚餐是：</p>
-        <h3 id="prize-text"></h3>
-        <button onclick="closeModal()">太棒了！</button>
+        <div class="category-title" id="modal-category"></div>
+        <div class="shop-label">✨ 學長姐極推店家 ✨</div>
+        <div class="shop-name" id="modal-shop"></div>
+        <div class="shop-label">好吃等級 (Google 評價)</div>
+        <div class="star-rating" id="modal-stars"></div>
+        <div><button onclick="closeModal()">太棒了！</button></div>
     </div>
 
     <script>
-        const canvas = document.getElementById("wheel");
-        const ctx = canvas.getContext("2d");
-        const spinBtn = document.getElementById("spin-btn");
-        const modal = document.getElementById("resultModal");
-        const prizeText = document.getElementById("prize-text");
+        // ===================================================================
+        // ✨ 策展人後台資料庫：包含真實存在、口碑大於 4.2 星的名單
+        // ===================================================================
+        const wheelData = [
+            {
+                category: " 宵夜街神級炸雞",
+                shops: [
+                    { name: "開源社香雞排 (清大店)", rating: 4.2 },
+                    { name: "滋滋炸雞翅", rating: 4.5 },
+                    { name: "阿亮香雞排", rating: 4.3 }
+                ]
+            },
+            {
+                category: " 東門市場文青料理",
+                shops: [
+                    { name: "硬派主廚的軟嫩料理", rating: 4.7 },
+                    { name: "大成1978古早味", rating: 4.6 },
+                    { name: "青丘。Qingqiu", rating: 4.8 },
+                    { name: "曼谷市場 (東門店)", rating: 4.4 }
+                ]
+            },
+            {
+                category: " 城隍廟百年肉圓",
+                shops: [
+                    { name: "柳家肉燥飯", rating: 4.3 },
+                    { name: "阿城號米粉", rating: 4.2 },
+                    { name: "王記肉圓", rating: 4.2 },
+                    { name: "西大發爆漿包子", rating: 4.3 }
+                ]
+            },
+            {
+                category: " 研究生續命咖啡",
+                shops: [
+                    { name: "墨咖啡 Ink Coffee", rating: 4.6 },
+                    { name: "暗室微光 In the Shadow of Gleam", rating: 4.5 },
+                    { name: "江山藝改所", rating: 4.6 },
+                    { name: "一想一響 ReEcho Coffee", rating: 4.5 }
+                ]
+            },
+            {
+                category: " 清大清茂麵線",
+                shops: [
+                    { name: "清茂素食麵線", rating: 4.7 },
+                    { name: "紅麵線 (建功路)", rating: 4.3 },
+                    { name: "港式鐘記燒臘", rating: 4.2 }
+                ]
+            },
+            {
+                category: " 大吃市人氣滷肉飯",
+                shops: [
+                    { name: "金連滷肉飯", rating: 4.2 },
+                    { name: "翁記滷肉飯 (牛埔店)", rating: 4.3 },
+                    { name: "禾日香魯肉飯", rating: 4.4 }
+                ]
+            },
+            {
+                category: " 水木餐廳經典排骨",
+                shops: [
+                    { name: "水木餐廳快餐部", rating: 4.3 },
+                    { name: "風雲餐廳二樓排骨", rating: 4.2 },
+                    { name: "正宗排骨飯 (建功)", rating: 4.2 }
+                ]
+            },
+            {
+                category: " 經國路深夜串燒",
+                shops: [
+                    { name: "私嚐串燒居酒屋", rating: 4.7 },
+                    { name: "大黑天串燒居酒屋", rating: 4.6 },
+                    { name: "燃手串 (新竹店)", rating: 4.4 }
+                ]
+            },
+            {
+                category: " 校門口隱藏版綠洲",
+                shops: [
+                    { name: "立晉傳統豆花", rating: 4.3 },
+                    { name: "小木屋鬆餅 (清大店)", rating: 4.4 },
+                    { name: "海鷗大腸包小腸", rating: 4.5 }
+                ]
+            },
+            {
+                category: " 工程師愛店肉羹",
+                shops: [
+                    { name: "飛龍肉圓生炒鴨肉羹", rating: 4.3 },
+                    { name: "公園黑乾麵", rating: 4.2 },
+                    { name: "林娘炸醬麵", rating: 4.4 }
+                ]
+            }
+        ];
 
-        // 🎨 延伸自圖片的 10 色深淺交錯調色盤
+        // 提取類別名稱供輪盤繪製使用
+        const options = wheelData.map(item => item.category);
+
+        // 🎨 莫蘭迪 10 色深淺交錯調色盤
         const colorPalette = [
             "#FBC0A8", "#6A8FAF", "#FCD3C1", "#82A5C3", "#E89E84", 
             "#557796", "#FDE3D6", "#9BBED4", "#D6866B", "#435D75"
         ];
+
+        const canvas = document.getElementById("wheel");
+        const ctx = canvas.getContext("2d");
+        const spinBtn = document.getElementById("spin-btn");
+        const modal = document.getElementById("resultModal");
         
-        // 從 CSS CSS :root 中讀取文字清單
-        const rawPrizes = getComputedStyle(document.documentElement).getPropertyValue('--wheel-prizes');
-        // 處理特殊引號與換行，將其轉為陣列
-        const options = rawPrizes.replace(/["']/g, "").split('\n')
-            .map(opt => opt.trim())
-            .filter(opt => opt.length > 0);
+        const mCategory = document.getElementById("modal-category");
+        const mShop = document.getElementById("modal-shop");
+        const mStars = document.getElementById("modal-stars");
 
         function drawWheel() {
             const numSegments = options.length;
@@ -181,6 +289,32 @@
             }
         }
 
+        // 生成星星符號的函式（支援精準比例）
+        function generateStarString(rating) {
+            let starsHtml = "";
+            const fullStars = Math.floor(rating);
+            const remainder = rating - fullStars;
+
+            // 滿星
+            for (let i = 0; i < fullStars; i++) {
+                starsHtml += "★";
+            }
+            // 半星或局部填色（若大於等於0.3且小於0.8顯示半星，大於等於0.8算滿星）
+            if (remainder >= 0.3 && remainder < 0.8) {
+                starsHtml += "½"; // 經典半星符號
+            } else if (remainder >= 0.8) {
+                starsHtml += "★";
+            }
+            
+            // 補齊到5顆星的灰色空星
+            const currentLength = fullStars + (remainder >= 0.3 ? 1 : 0);
+            for (let i = currentLength; i < 5; i++) {
+                starsHtml += "<span style='color:#ccc;'>★</span>";
+            }
+            
+            return `${starsHtml} <span style='font-size:1rem; color:#666; font-weight:normal;'>(${rating})</span>`;
+        }
+
         let isSpinning = false;
         spinBtn.addEventListener("click", () => {
             if (isSpinning || options.length < 2) return;
@@ -201,7 +335,16 @@
                 const pointerAngle = (360 - actualDegrees + 270) % 360;
                 const winningIndex = Math.floor(pointerAngle / (360 / numSegments)) % numSegments;
 
-                prizeText.innerText = options[winningIndex];
+                // 🌟 核心升級：從抽中的類別中，隨機抓取一家店
+                const targetCategoryData = wheelData[winningIndex];
+                const shopList = targetCategoryData.shops;
+                const randomShop = shopList[Math.floor(Math.random() * shopList.length)];
+
+                // 寫入彈出視窗
+                mCategory.innerText = targetCategoryData.category;
+                mShop.innerText = randomShop.name;
+                mStars.innerHTML = generateStarString(randomShop.rating);
+                
                 modal.style.display = "block";
                 
                 canvas.style.transition = "none";
